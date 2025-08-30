@@ -1,7 +1,7 @@
 import numpy as np
 
-class MazeEnv:
-	def __init__(self, x_max=20, y_max=20, default_start=(1.0,1.0), default_goal=(9.0,9.0)):
+class Env:
+	def __init__(self, x_max=10, y_max=10, default_start=(1.0,1.0), default_goal=(9.0,9.0)):
 		self.X_max = float(x_max)
 		self.Y_max = float(y_max)
 		self.default_start = np.array(default_start, dtype=np.float32)
@@ -22,15 +22,7 @@ class MazeEnv:
 		self.success_tol = 1.5  # Default tolerance for success
 
 	def reset(self, start=None, goal=None, randomize_obstacles=False, n_obstacles=6, max_size=20, seed=None):
-		"""
-		Reset environment.
-		- start: optional [x,y] start position (overrides default)
-		- goal: optional [x,y] goal position (overrides default)
-		- randomize_obstacles: if True, generate random obstacles each reset
-		- n_obstacles, max_size: parameters for random obstacle generator
-		- seed: optional seed for deterministic randomization
-		Returns observation: np.array([agent_x, agent_y, goal_x, goal_y])
-		"""
+		
 		if seed is not None:
 			np.random.seed(seed)
 		if start is None:
@@ -59,7 +51,7 @@ class MazeEnv:
 		obs = np.concatenate([self.vector_agentState.copy(), self.Terminal.copy()])
 		return obs.astype(np.float32)
 
-	def randomize_obstacles(self, n_obstacles=6, max_size=1, min_size=1, clearance=2.0):
+	def randomize_obstacles(self, n_obstacles=6, max_size=None, min_size=0.5, clearance=2.0):
 		"""
 		Randomly generate rectangular obstacles, avoiding start and goal positions.
 		Each obstacle: [x, y, width, height]
@@ -67,8 +59,8 @@ class MazeEnv:
 		self.obstacles = []
 		tries = 0
 		while len(self.obstacles) < n_obstacles and tries < n_obstacles * 10:
-			width = np.random.uniform(min_size, max_size)
-			height = np.random.uniform(min_size, max_size)
+			width = np.random.uniform(min_size, max_size) if max_size else min_size
+			height = np.random.uniform(min_size, max_size) if max_size else min_size
 			x = np.random.uniform(0, self.X_max - width)
 			y = np.random.uniform(0, self.Y_max - height)
 			obs_rect = [x, y, width, height]
@@ -122,6 +114,6 @@ class MazeEnv:
 	
 
 if __name__ == "__main__":
-	env = MazeEnv()
+	env = Env()
 	env.reset(randomize_obstacles=True)
 	print("Random Obstacles:", env.obstacles)

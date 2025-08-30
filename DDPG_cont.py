@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from collections import deque
 import random
-from Environment2 import MazeEnv
+from Environment2 import Env
 import os
 
 
@@ -16,6 +16,7 @@ class HERReplayBuffer:
 		self.storage = deque(maxlen=self.max_size)
 		self.her_k = int(her_k) # number of future goals to sample per transition
 		self.episode_buffer = [] # temporary per-episode buffer to apply HER at episode end
+		self.success_tol = 1.5  # Default tolerance for success
 
 	def _add_transition(self, transition):
 		# transition: (s, a, r, s', done, goal)
@@ -35,13 +36,13 @@ class HERReplayBuffer:
 			self._add_transition((s, a, r, s2, done, goal))
 			# sample up to her_k future achieved goals
 			for _ in range(self.her_k):
-				future_idx = np.random.randint(idx, L)
+				future_idx = np.random.randint(idx+1, L)
 				# choose the achieved goal as the agent position at future_idx's next state
 				achieved = ep[future_idx][3] # s' of future transition
 				new_goal = achieved[:2].copy() # assume s is [ax,ay,gx,gy]
 				# recompute reward for new goal (sparse): success if next_state within tol
 				achieved_dist = np.linalg.norm(s2[:2] - new_goal)
-				new_r = 20.0 if achieved_dist <= 1.5 else -1.0
+				new_r = 100.0 if achieved_dist <= self.success_tol else (-achieved_dist*0.1 - 1.0)
 				# relabel states: replace goal part of s and s2
 				s_rel = s.copy()
 				s_rel[2:4] = new_goal
@@ -104,7 +105,7 @@ class CriticTwin(nn.Module):
 		return self.q1(sa), self.q2(sa)
 
 class DDPGAgent:
-	def __init__(self, state_dim, action_dim, max_action=5.0, device=None):
+	def __init__(self, state_dim, action_dim, max_action=0.5, device=None, success_tol=1.5):
 		self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
 		self.action_dim = action_dim
 		self.max_action = float(max_action)
@@ -115,12 +116,13 @@ class DDPGAgent:
 		self.critic = CriticTwin(state_dim, action_dim).to(self.device)
 		self.critic_target = CriticTwin(state_dim, action_dim).to(self.device)
 		self.critic_target.load_state_dict(self.critic.state_dict())
-		self.critic_opt = optim.Adam(self.critic.parameters(), lr=1e-3, weight_decay=1e-2)
+		self.critic_opt = optim.Adam(self.critic.parameters(), lr=1e-3)
 		self.replay = HERReplayBuffer(max_size=200000)
 		self.gamma = 0.99
-		self.tau = 4e-3
-		self.noise_std = 1.0
+		self.tau = 1e-3
+		self.noise_std = 0.3
 		self.noise_decay = 1e-5
+		self.success_tol = success_tol
 
 	def select_action(self, state, noise=True):
 		state_t = torch.FloatTensor(state).unsqueeze(0).to(self.device)
@@ -133,7 +135,7 @@ class DDPGAgent:
 		self.noise_std = max(0.02, self.noise_std * (1.0 - self.noise_decay))
 		return a
 
-	def train(self, batch_size=128, policy_noise=0.4, noise_clip=0.5, policy_freq=2):
+	def train(self, batch_size=64, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
 		if len(self.replay.storage) < batch_size:
 			return
 		state, action, reward, next_state, done, goal = self.replay.sample(batch_size)
@@ -180,7 +182,7 @@ class DDPGAgent:
 		self.actor.load_state_dict(ckpt['actor'])
 		self.critic.load_state_dict(ckpt['critic'])
 
-def train_loop(episodes=1000, max_steps=200, render=False):
+def train_loop(episodes=500, max_steps=200, render=False):
 	# Load start and goal from selected_points.txt if available
 	start_pos, goal_pos = None, None
 	if os.path.exists('selected_points.txt'):
@@ -189,15 +191,15 @@ def train_loop(episodes=1000, max_steps=200, render=False):
 			if len(lines) >= 2:
 				start_pos = [float(x) for x in lines[0].strip().split(',')]
 				goal_pos = [float(x) for x in lines[1].strip().split(',')]
-	env = MazeEnv(default_start=start_pos if start_pos else (1.0,1.0), default_goal=goal_pos if goal_pos else (9.0,9.0))
+	env = Env(default_start=start_pos if start_pos else (1.0,1.0), default_goal=goal_pos if goal_pos else (9.0,9.0))
 	env.reset(randomize_obstacles=True)
 	print("Random Obstacles:", env.obstacles)
 	state_dim = env.reset().shape[0]
 	action_dim = 2
-	agent = DDPGAgent(state_dim, action_dim, max_action=10.0)
+	agent = DDPGAgent(state_dim, action_dim, max_action=0.5, success_tol=env.success_tol)
 	import matplotlib.pyplot as plt
 	from matplotlib.patches import Rectangle
-	batch_size = 128
+	batch_size = 64
 	total_steps = 0
 	success_history = []
 	cumulative_rewards = []
