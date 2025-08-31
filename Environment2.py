@@ -21,7 +21,7 @@ class Env:
 		self.obstacles = []
 		self.success_tol = 1.5  # Default tolerance for success
 
-	def reset(self, start=None, goal=None, randomize_obstacles=False, n_obstacles=6, max_size=20, seed=None):
+	def reset(self, start=None, goal=None, randomize_obstacles=False, n_obstacles=4, max_size=1.0, seed=None):
 		
 		if seed is not None:
 			np.random.seed(seed)
@@ -51,7 +51,7 @@ class Env:
 		obs = np.concatenate([self.vector_agentState.copy(), self.Terminal.copy()])
 		return obs.astype(np.float32)
 
-	def randomize_obstacles(self, n_obstacles=6, max_size=None, min_size=0.5, clearance=2.0):
+	def randomize_obstacles(self, n_obstacles=4, max_size=1.0, min_size=0.5, clearance=2.0):
 		"""
 		Randomly generate rectangular obstacles, avoiding start and goal positions.
 		Each obstacle: [x, y, width, height]
@@ -59,8 +59,8 @@ class Env:
 		self.obstacles = []
 		tries = 0
 		while len(self.obstacles) < n_obstacles and tries < n_obstacles * 10:
-			width = np.random.uniform(min_size, max_size) if max_size else min_size
-			height = np.random.uniform(min_size, max_size) if max_size else min_size
+			width = np.random.uniform(min_size, max_size)
+			height = np.random.uniform(min_size, max_size)
 			x = np.random.uniform(0, self.X_max - width)
 			y = np.random.uniform(0, self.Y_max - height)
 			obs_rect = [x, y, width, height]

@@ -8,7 +8,7 @@ from environment import final_states
 from environment import obstacle_width
 import os
 
-os.makedirs('DQN_visuals', exist_ok=True)
+os.makedirs('DRL-based-path-finding/DQN_visuals', exist_ok=True)
 
 def load_selected_points(filename='selected_points.txt'):
     try:
@@ -133,7 +133,7 @@ if __name__=="__main__":
     visited_Y = [starting_position[1]]
 
     # Create directory for models
-    os.makedirs('saved_models', exist_ok=True)
+    os.makedirs('DRL-based-path-finding/saved_models', exist_ok=True)
     best_reward = float('-inf')
 
     start_time = time.time()
@@ -203,10 +203,10 @@ if __name__=="__main__":
             # Save model if it achieves better reward
             if cum_reward > best_reward:
                 best_reward = cum_reward
-                agent.save_model(f'saved_models/dqn_best_model.pth')
+                agent.save_model(f'DRL-based-path-finding/saved_models/dqn_best_model.pth')
             # Save checkpoint every 50 episodes
             if ep % 50 == 0:
-                agent.save_model(f'saved_models/dqn_checkpoint_ep{ep}.pth')
+                agent.save_model(f'DRL-based-path-finding/saved_models/dqn_checkpoint_ep{ep}.pth')
 
         # Update the target network, copying all weights and biases in DQN
         if ep % TARGET_UPDATE == 0:
@@ -214,11 +214,11 @@ if __name__=="__main__":
     env.final()
 
     # Save final model
-    agent.save_model('saved_models/dqn_final_model.pth')
-    print("Training completed. Final model saved to 'saved_models/dqn_final_model.pth'")
-    
+    agent.save_model('DRL-based-path-finding/saved_models/dqn_final_model.pth')
+    print("Training completed. Final model saved to 'DRL-based-path-finding/saved_models/dqn_final_model.pth'")
+
     # Evaluate the trained model
-    def evaluate_model(agent, env, num_eval_episodes=10, model_path='saved_models/dqn_final_model.pth'):
+    def evaluate_model(agent, env, num_eval_episodes=10, model_path='DRL-based-path-finding/saved_models/dqn_final_model.pth'):
         """Evaluate the trained DQN model"""
         print(f"\nEvaluating model from {model_path}...")
         agent.load_model(model_path)
@@ -309,7 +309,7 @@ if __name__=="__main__":
     plt.grid(False)
     plt.xticks(size = '12')
     plt.yticks(size = '12')
-    plt.savefig('DQN_visuals/DQN_Accumulated_Reward.png', format='png', dpi=300)
+    plt.savefig('DRL-based-path-finding/DQN_visuals/DQN_Accumulated_Reward.png', format='png', dpi=300)
 
     # Plot number of steps (adjust range to match actual data length)
     plt.figure(tight_layout=True)
@@ -319,7 +319,7 @@ if __name__=="__main__":
     plt.grid(False)
     plt.xticks(size = '12')
     plt.yticks(size = '12')
-    plt.savefig('DQN_visuals/DQN_Steps_per_Episode.png', format='png', dpi=300)
+    plt.savefig('DRL-based-path-finding/DQN_visuals/DQN_Steps_per_Episode.png', format='png', dpi=300)
 
     ### Plot the trajectory
     final_path=list(final_states().values())
@@ -375,7 +375,7 @@ if __name__=="__main__":
     plt.xticks(size = '12')
     plt.yticks(size = '12')
     plt.gca().set_aspect('equal', adjustable='box')
-    plt.savefig('DQN_visuals/DQN_Shortest_Path.png', format='png', dpi=300)
+    plt.savefig('DRL-based-path-finding/DQN_visuals/DQN_Shortest_Path.png', format='png', dpi=300)
 
     plt.figure()
    
@@ -402,7 +402,7 @@ if __name__=="__main__":
     plt.xticks(size = '12')
     plt.yticks(size = '12')
     plt.gca().set_aspect('equal', adjustable='box')
-    plt.savefig('DQN_visuals/DQN_Final_Path.png', format='png', dpi=300)
+    plt.savefig('DRL-based-path-finding/DQN_visuals/DQN_Final_Path.png', format='png', dpi=300)
     plt.show()
 
     # Animation options
@@ -418,13 +418,13 @@ if __name__=="__main__":
                 print("Running animated evaluation...")
                 from dqn_animation import animate_evaluation
                 anim, results = animate_evaluation(agent, env, starting_position, target_position,
-                                                 model_path='saved_models/dqn_final_model.pth',
+                                                 model_path='DRL-based-path-finding/saved_models/dqn_final_model.pth',
                                                  save_gif=True, interval=600)
             elif sys.argv[1] == '--animate-fast':
                 print("Running fast animated evaluation...")
                 from dqn_animation import animate_evaluation
                 anim, results = animate_evaluation(agent, env, starting_position, target_position,
-                                                 model_path='saved_models/dqn_final_model.pth',
+                                                 model_path='DRL-based-path-finding/saved_models/dqn_final_model.pth',
                                                  save_gif=True, interval=300)
             elif sys.argv[1] == '--animate-training':
                 print("Running animated training episode...")

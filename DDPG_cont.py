@@ -35,20 +35,21 @@ class HERReplayBuffer:
 			# add original
 			self._add_transition((s, a, r, s2, done, goal))
 			# sample up to her_k future achieved goals
-			for _ in range(self.her_k):
-				future_idx = np.random.randint(idx+1, L)
-				# choose the achieved goal as the agent position at future_idx's next state
-				achieved = ep[future_idx][3] # s' of future transition
-				new_goal = achieved[:2].copy() # assume s is [ax,ay,gx,gy]
-				# recompute reward for new goal (sparse): success if next_state within tol
-				achieved_dist = np.linalg.norm(s2[:2] - new_goal)
-				new_r = 100.0 if achieved_dist <= self.success_tol else (-achieved_dist*0.1 - 1.0)
-				# relabel states: replace goal part of s and s2
-				s_rel = s.copy()
-				s_rel[2:4] = new_goal
-				s2_rel = s2.copy()
-				s2_rel[2:4] = new_goal
-				self._add_transition((s_rel, a, new_r, s2_rel, done, new_goal))
+			if idx + 1 < L:
+				for _ in range(self.her_k):
+					future_idx = np.random.randint(idx + 1, L)
+					# choose the achieved goal as the agent position at future_idx's next state
+					achieved = ep[future_idx][3] # s' of future transition
+					new_goal = achieved[:2].copy() # assume s is [ax,ay,gx,gy]
+					# recompute reward for new goal (sparse): success if next_state within tol
+					achieved_dist = np.linalg.norm(s2[:2] - new_goal)
+					new_r = 100.0 if achieved_dist <= self.success_tol else (-achieved_dist*0.1 - 1.0)
+					# relabel states: replace goal part of s and s2
+					s_rel = s.copy()
+					s_rel[2:4] = new_goal
+					s2_rel = s2.copy()
+					s2_rel[2:4] = new_goal
+					self._add_transition((s_rel, a, new_r, s2_rel, done, new_goal))
 		# clear episode buffer
 		self.episode_buffer = []
 
@@ -182,128 +183,117 @@ class DDPGAgent:
 		self.actor.load_state_dict(ckpt['actor'])
 		self.critic.load_state_dict(ckpt['critic'])
 
+def get_selected_points(filename='selected_points.txt'):
+    if os.path.exists(filename):
+        with open(filename, 'r') as f:
+            lines = f.readlines()
+            if len(lines) >= 2:
+                start_pos = [float(x) for x in lines[0].strip().split(',')]
+                goal_pos = [float(x) for x in lines[1].strip().split(',')]
+                return start_pos, goal_pos
+    return None, None
+
 def train_loop(episodes=500, max_steps=200, render=False):
-	# Load start and goal from selected_points.txt if available
-	start_pos, goal_pos = None, None
-	if os.path.exists('selected_points.txt'):
-		with open('selected_points.txt', 'r') as f:
-			lines = f.readlines()
-			if len(lines) >= 2:
-				start_pos = [float(x) for x in lines[0].strip().split(',')]
-				goal_pos = [float(x) for x in lines[1].strip().split(',')]
-	env = Env(default_start=start_pos if start_pos else (1.0,1.0), default_goal=goal_pos if goal_pos else (9.0,9.0))
-	env.reset(randomize_obstacles=True)
-	print("Random Obstacles:", env.obstacles)
-	state_dim = env.reset().shape[0]
-	action_dim = 2
-	agent = DDPGAgent(state_dim, action_dim, max_action=0.5, success_tol=env.success_tol)
-	import matplotlib.pyplot as plt
-	from matplotlib.patches import Rectangle
-	batch_size = 64
-	total_steps = 0
-	success_history = []
-	cumulative_rewards = []
-	steps_per_episode = []
-	final_path_x = []
-	final_path_y = []
-	shortest_path_x = [env.default_start[0]]
-	shortest_path_y = [env.default_start[1]]
-	for ep in range(episodes):
-		obs = env.reset()
-		ep_return = 0.0
-		agent.replay.episode_buffer = []  # reset episode buffer
-		visited_x = [obs[0]]
-		visited_y = [obs[1]]
-		for t in range(max_steps):
-			action = agent.select_action(obs, noise=True)
-			next_obs, flag, reward, done, _ = env.step(action)
-			goal = env.Terminal.copy() if hasattr(env, 'Terminal') else None
-			agent.replay.add_episode_transition((obs, action, reward, next_obs, float(done), goal))
-			agent.train(batch_size=batch_size)
-			obs = next_obs
-			ep_return += reward
-			total_steps += 1
-			visited_x.append(obs[0])
-			visited_y.append(obs[1])
-			if done:
-				success = 1 if flag == 'goal' else 0
-				success_history.append(success)
-				break
-		# Commit HER episode transitions at episode end
-		agent.replay.commit_episode()
-		cumulative_rewards.append(ep_return)
-		steps_per_episode.append(len(visited_x)-1)
-		# Save final path for last episode
-		if ep == episodes-1:
-			final_path_x = visited_x.copy()
-			final_path_y = visited_y.copy()
-		# Save shortest path (straight line) for visualization
-		if ep == 0:
-			shortest_path_x = [env.default_start[0], env.Terminal[0]]
-			shortest_path_y = [env.default_start[1], env.Terminal[1]]
-		if (ep + 1) % 10 == 0:
-			avg_success = np.mean(success_history[-50:]) if len(success_history) > 0 else 0.0
-			print(f"EP {ep+1} | return {ep_return:.2f} | recent_success {avg_success:.3f} | noise {agent.noise_std:.3f}")
-		# optional: save model periodically
-		if (ep + 1) % 200 == 0:
-			agent.save(f"ddpg_checkpoint_ep{ep+1}.pt")
-	# --- Visualization ---
-	plt.figure(tight_layout=True)
-	plt.plot(range(episodes), cumulative_rewards, label='Cumulative Rewards', color='b')
-	plt.xlabel('Episode', size=14)
-	plt.ylabel('Accumulated Reward', size=14)
-	plt.title('DDPG Accumulated Rewards')
-	plt.grid(True)
-	plt.xticks(size=12)
-	plt.yticks(size=12)
-	plt.legend()
-	plt.show()
+    # Load start and goal from selected_points.txt if available
+    start_pos, goal_pos = get_selected_points('selected_points.txt')
+    env = Env(default_start=start_pos if start_pos else (1.0,1.0), default_goal=goal_pos if goal_pos else (9.0,9.0))
+    env.reset(randomize_obstacles=True)
+    print("Random Obstacles:", env.obstacles)
+    state_dim = env.reset().shape[0]
+    action_dim = 2
+    agent = DDPGAgent(state_dim, action_dim, max_action=0.5, success_tol=env.success_tol)
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+    batch_size = 64
+    total_steps = 0
+    success_history = []
+    cumulative_rewards = []
+    steps_per_episode = []
+    final_path_x = []
+    final_path_y = []
+    shortest_path_x = [env.default_start[0]]
+    shortest_path_y = [env.default_start[1]]
+    for ep in range(episodes):
+        obs = env.reset()
+        ep_return = 0.0
+        agent.replay.episode_buffer = []  # reset episode buffer
+        visited_x = [obs[0]]
+        visited_y = [obs[1]]
+        for t in range(max_steps):
+            action = agent.select_action(obs, noise=True)
+            next_obs, flag, reward, done, _ = env.step(action)
+            goal = env.Terminal.copy() if hasattr(env, 'Terminal') else None
+            agent.replay.add_episode_transition((obs, action, reward, next_obs, float(done), goal))
+            agent.train(batch_size=batch_size)
+            obs = next_obs
+            ep_return += reward
+            total_steps += 1
+            visited_x.append(obs[0])
+            visited_y.append(obs[1])
+            if reward == 100.0:
+                print(f"Episode {ep+1} | Step {t+1}: Agent reached the goal!")
+            if done:
+                success = 1 if flag == 'goal' else 0
+                success_history.append(success)
+                break
+        # Commit HER episode transitions at episode end
+        agent.replay.commit_episode()
+        cumulative_rewards.append(ep_return)
+        steps_per_episode.append(len(visited_x)-1)
+        # Save final path for last episode
+        if ep == episodes-1:
+            final_path_x = visited_x.copy()
+            final_path_y = visited_y.copy()
+        # Save shortest path (straight line) for visualization
+        if ep == 0:
+            shortest_path_x = [env.default_start[0], env.Terminal[0]]
+            shortest_path_y = [env.default_start[1], env.Terminal[1]]
+        if (ep + 1) % 10 == 0:
+            avg_success = np.mean(success_history[-50:]) if len(success_history) > 0 else 0.0
+            print(f"EP {ep+1} | return {ep_return:.2f} | recent_success {avg_success:.3f} | noise {agent.noise_std:.3f}")
+        # optional: save model periodically
+        if (ep + 1) % 200 == 0:
+            agent.save(f"ddpg_checkpoint_ep{ep+1}.pt")
+    # --- Visualization ---
+    plt.figure(tight_layout=True)
+    plt.plot(range(episodes), cumulative_rewards, label='Cumulative Rewards', color='b')
+    plt.xlabel('Episode', size=14)
+    plt.ylabel('Accumulated Reward', size=14)
+    plt.title('DDPG Accumulated Rewards')
+    plt.grid(True)
+    plt.xticks(size=12)
+    plt.yticks(size=12)
+    plt.legend()
+    plt.show()
 
-	plt.figure(tight_layout=True)
-	plt.plot(range(episodes), steps_per_episode, color='g')
-	plt.xlabel('Episode', size=14)
-	plt.ylabel('Steps Taken', size=14)
-	plt.title('DDPG Steps per Episode')
-	plt.grid(True)
-	plt.xticks(size=12)
-	plt.yticks(size=12)
-	plt.show()
+    plt.figure(tight_layout=True)
+    plt.plot(range(episodes), steps_per_episode, color='g')
+    plt.xlabel('Episode', size=14)
+    plt.ylabel('Steps Taken', size=14)
+    plt.title('DDPG Steps per Episode')
+    plt.grid(True)
+    plt.xticks(size=12)
+    plt.yticks(size=12)
+    plt.show()
 
-	# Final path visualization
-	plt.figure(figsize=(8, 8))
-	plt.plot(final_path_x, final_path_y, 'r-', linewidth=2, label='Final Path')
-	plt.scatter(env.default_start[0], env.default_start[1], c='green', s=100, label='Start')
-	plt.scatter(env.Terminal[0], env.Terminal[1], c='red', s=100, label='Goal')
-	# Plot obstacles if available
-	if hasattr(env, 'obstacles') and env.obstacles:
-		for obs in env.obstacles:
-			if len(obs) == 4:
-				plt.gca().add_patch(Rectangle((obs[0], obs[1]), obs[2], obs[3], fc='blue', ec='blue'))
-	plt.xlabel('x (m)', size=14)
-	plt.ylabel('y (m)', size=14)
-	plt.title('DDPG Final Path')
-	plt.grid(True)
-	plt.legend()
-	plt.xlim(0, env.X_max)
-	plt.ylim(0, env.Y_max)
-	plt.gca().set_aspect('equal', adjustable='box')
-	plt.show()
-
-	# Shortest path visualization (straight line)
-	plt.figure(figsize=(8, 8))
-	plt.plot(shortest_path_x, shortest_path_y, 'b--', linewidth=2, label='Shortest Path')
-	plt.scatter(env.default_start[0], env.default_start[1], c='green', s=100, label='Start')
-	plt.scatter(env.Terminal[0], env.Terminal[1], c='red', s=100, label='Goal')
-	plt.xlabel('x (m)', size=14)
-	plt.ylabel('y (m)', size=14)
-	plt.title('DDPG Shortest Path')
-	plt.grid(True)
-	plt.legend()
-	plt.xlim(0, env.X_max)
-	plt.ylim(0, env.Y_max)
-	plt.gca().set_aspect('equal', adjustable='box')
-	plt.show()
-	return agent
-
+    # Final path visualization
+    plt.figure(figsize=(8, 8))
+    plt.plot(final_path_x, final_path_y, 'r-', linewidth=2, label='Final Path')
+    plt.scatter(env.default_start[0], env.default_start[1], c='green', s=100, label='Start')
+    plt.scatter(env.Terminal[0], env.Terminal[1], c='red', s=100, label='Goal')
+    # Plot obstacles if available
+    if hasattr(env, 'obstacles') and env.obstacles:
+        for obs in env.obstacles:
+            if len(obs) == 4:
+                plt.gca().add_patch(Rectangle((obs[0], obs[1]), obs[2], obs[3], fc='blue', ec='blue'))
+    plt.xlabel('x (m)', size=14)
+    plt.ylabel('y (m)', size=14)
+    plt.title('DDPG Final Path')
+    plt.grid(True)
+    plt.legend()
+    plt.xlim(0, env.X_max)
+    plt.ylim(0, env.Y_max)
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.show()
 if __name__ == '__main__':
 	agent = train_loop(episodes=500)

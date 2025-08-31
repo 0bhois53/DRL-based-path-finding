@@ -8,7 +8,7 @@ import numpy as np
 import os
 from scipy.interpolate import splprep, splev
 
-def load_selected_points(filename='selected_points.txt'):
+def load_selected_points(filename='DRL-based-path-finding/selected_points.txt'):
     try:
         with open(filename, 'r') as f:
             lines = f.readlines()
@@ -37,8 +37,8 @@ env = Environment(starting_position, target_position, 100, 100, n_actions)
 
 # Create directory for saving models
 import os
-os.makedirs('saved_models_Q_learning', exist_ok=True)
-os.makedirs('Q_learning_visuals', exist_ok= True)
+os.makedirs('DRL-based-path-finding/saved_models_Q_learning', exist_ok=True)
+os.makedirs('DRL-based-path-finding/Q_learning_visuals', exist_ok= True)
 
 def update():
     import time
@@ -99,12 +99,12 @@ def update():
                 
                 # Save model if it achieves better reward
                 if len(cumulative_rewards) == 1 or cum_reward > max(cumulative_rewards[:-1]):
-                    agent.save_model('saved_models_Q_learning/q_learning_best_model.pkl')
+                    agent.save_model('DRL-based-path-finding/saved_models_Q_learning/q_learning_best_model.pkl')
                     print(f"New best model saved with reward: {cum_reward}")
                 
                 # Save checkpoint every 50 episodes
                 if ep % 50 == 0:
-                    agent.save_model(f'saved_models_Q_learning/q_learning_checkpoint_ep{ep}.pkl')
+                    agent.save_model(f'DRL-based-path-finding/saved_models_Q_learning/q_learning_checkpoint_ep{ep}.pkl')
                 
                 print("episode: %d: reward: %6.2f" % ( ep, cum_reward))
                 print("**********************************************")
@@ -116,25 +116,15 @@ def update():
     env.final()
     
     # Save final model
-    agent.save_model('saved_models_Q_learning/q_learning_final_model.pkl')
-    print("Training completed. Final model saved to 'saved_models_Q_learning/q_learning_final_model.pkl'")
-
-    # Evaluate the trained model on training environment first
-    print("\n" + "="*60)
-    print("EVALUATING ON TRAINING ENVIRONMENT (Same obstacles as training)")
-    print("="*60)
-    training_eval_results = evaluate_model(agent, env, num_eval_episodes=5, 
-                                         model_path='saved_models_Q_learning/q_learning_final_model.pkl',
-                                         use_randomized_env=False, 
-                                         start_pos=starting_position, 
-                                         target_pos=target_position)
+    agent.save_model('DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl')
+    print("Training completed. Final model saved to 'DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl'")
 
     # Evaluate the trained model on randomized environments 
     print("\n" + "="*60)
     print("EVALUATING ON RANDOMIZED ENVIRONMENTS (Testing generalization)")
     print("="*60)
     randomized_eval_results = evaluate_model(agent, env, num_eval_episodes=10, 
-                                            model_path='saved_models_Q_learning/q_learning_final_model.pkl',
+                                            model_path='DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl',
                                             use_randomized_env=True, 
                                             start_pos=starting_position, 
                                             target_pos=target_position)
@@ -159,7 +149,7 @@ def update():
     plt.grid(False)
     plt.xticks(size = '12')
     plt.yticks(size = '12')
-    plt.savefig('Q_learning_visuals/Q_learning_Accumulated_Reward.png', format='png', dpi=300)
+    plt.savefig('DRL-based-path-finding/Q_learning_visuals/Q_learning_Accumulated_Reward.png', format='png', dpi=300)
 
     plt.figure(tight_layout=True)
     plt.plot(range(num_episodes), Num_steps, color='b')
@@ -168,7 +158,7 @@ def update():
     plt.grid(False)
     plt.xticks(size = '12')
     plt.yticks(size = '12')
-    plt.savefig('Q_learning_visuals/Q_learning_Steps_per_Episode.png', format='png', dpi=300)
+    plt.savefig('DRL-based-path-finding/Q_learning_visuals/Q_learning_Steps_per_Episode.png', format='png', dpi=300)
 
     ### Plot the trajectory
     final_path=list(final_states().values())
@@ -221,7 +211,7 @@ def update():
     plt.xticks(size = '12')
     plt.yticks(size = '12')
     plt.gca().set_aspect('equal', adjustable='box')
-    plt.savefig('Q_learning_visuals/Q_learning_Shortest_Path.png', format='png', dpi=300)
+    plt.savefig('DRL-based-path-finding/Q_learning_visuals/Q_learning_Shortest_Path.png', format='png', dpi=300)
 
     plt.figure()
     plt.quiver(x_final[:-1], y_final[:-1], x_final[1:]-x_final[:-1], y_final[1:]-y_final[:-1], scale_units='xy', angles='xy', scale=1)
@@ -245,12 +235,12 @@ def update():
     plt.xticks(size = '12')
     plt.yticks(size = '12')
     plt.gca().set_aspect('equal', adjustable='box')
-    plt.savefig('Q_learning_visuals/Q_learning_Final_Path.png', format='png', dpi=300)
+    plt.savefig('DRL-based-path-finding/Q_learning_visuals/Q_learning_Final_Path.png', format='png', dpi=300)
     plt.show()
     # # Plotting the results
     
     # Return evaluation results for comparison
-    return training_eval_results, randomized_eval_results
+    return None, randomized_eval_results
 
 def create_randomized_environment(start_pos, target_pos, grid_size_x=100, grid_size_y=100, n_actions=8):
     """Create a new environment with randomized obstacles for evaluation"""
@@ -259,7 +249,7 @@ def create_randomized_environment(start_pos, target_pos, grid_size_x=100, grid_s
     print(f"Created evaluation environment with {len(eval_env.Obstacle_x)} obstacles")
     return eval_env
 
-def evaluate_model(agent, env, num_eval_episodes=10, model_path='saved_models_Q_learning/q_learning_final_model.pkl', 
+def evaluate_model(agent, env, num_eval_episodes=10, model_path='DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl', 
                   use_randomized_env=True, start_pos=None, target_pos=None):
     """Evaluate the trained Q-Learning model on randomized environments"""
     print(f"\nEvaluating model from {model_path}...")
@@ -417,7 +407,7 @@ if __name__ == "__main__":
     print("RUNNING ADDITIONAL RANDOMIZED ENVIRONMENT EVALUATION...")
     print("="*50)
     additional_eval_results = evaluate_model(agent, env, num_eval_episodes=5, 
-                                           model_path='saved_models_Q_learning/q_learning_final_model.pkl',
+                                           model_path='DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl',
                                            use_randomized_env=True,
                                            start_pos=starting_position, 
                                            target_pos=target_position)
@@ -426,12 +416,9 @@ if __name__ == "__main__":
     print("\n" + "="*60)
     print("COMPARISON SUMMARY")
     print("="*60)
-    print(f"Training Environment Success Rate: {training_eval_results['success_rate']:.1f}%")
     print(f"Randomized Environment Success Rate: {randomized_eval_results['success_rate']:.1f}%")
-    
-    generalization_performance = randomized_eval_results['success_rate'] / max(training_eval_results['success_rate'], 1) * 100
-    print(f"Generalization Performance: {generalization_performance:.1f}% of training performance")
-    
+    generalization_performance = randomized_eval_results['success_rate']
+    print(f"Generalization Performance: {generalization_performance:.1f}%")
     if randomized_eval_results['success_rate'] >= 70:
         print("✅ EXCELLENT: Agent shows strong generalization to new environments!")
     elif randomized_eval_results['success_rate'] >= 50:
@@ -458,30 +445,30 @@ if __name__ == "__main__":
                     print("Creating training environment animation...")
                     from q_learning_animation import animate_evaluation
                     anim, results = animate_evaluation(agent, env, starting_position, target_position,
-                                                     model_path='saved_models_Q_learning/q_learning_final_model.pkl',
-                                                     save_gif=True, interval=600, use_randomized_env=False)
+                                                     model_path='DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl',
+                                                     save_gif=False, interval=600, use_randomized_env=False)
                 
                 elif choice == '2':
                     print("Creating randomized environment animation...")
                     from q_learning_animation import animate_evaluation
                     anim, results = animate_evaluation(agent, env, starting_position, target_position,
-                                                     model_path='saved_models_Q_learning/q_learning_final_model.pkl',
-                                                     save_gif=True, interval=600, use_randomized_env=True)
-                
+                                                     model_path='DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl',
+                                                     save_gif=False, interval=600, use_randomized_env=True)
+
                 elif choice == '3':
                     print("Creating multiple randomized environment animations...")
                     from q_learning_animation import animate_randomized_evaluations
                     anims, results = animate_randomized_evaluations(agent, env, starting_position, target_position,
                                                                    num_episodes=3,
-                                                                   model_path='saved_models_Q_learning/q_learning_final_model.pkl',
-                                                                   save_gifs=True, interval=600)
+                                                                   model_path='DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl',
+                                                                   save_gifs=False, interval=600)
                 
                 elif choice == '4':
                     print("Creating comparison animations...")
                     from q_learning_animation import animate_comparison
                     comparison_results = animate_comparison(agent, env, starting_position, target_position,
-                                                          model_path='saved_models_Q_learning/q_learning_final_model.pkl',
-                                                          save_gifs=True, interval=600)
+                                                          model_path='DRL-based-path-finding/saved_models_Q_learning/q_learning_final_model.pkl',
+                                                          save_gifs=False, interval=600)
                 
                 else:
                     print("Invalid choice. Skipping animation.")

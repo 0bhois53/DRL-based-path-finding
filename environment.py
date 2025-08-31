@@ -140,13 +140,13 @@ class Environment(object):
     self.agentState[0][9][1] = 0
     self.agentState[0, int(i_y), int(i_x)] = 1
     self.steps_counter += 1
-    self.Is_Terminal = self.isTerminal() # achieve the goal or not
+    self.Is_Terminal = self.isTerminal() # achieved the goal or not
 
     reward, next_state_flag = self.get_reward(self.vector_agentState, action)
 
     return self.agentState, next_state_flag, reward, self.Is_Terminal, None
 
-  # function for judging whether agent achieve the goal
+  # function for judging whether agent achieved the goal
   def isTerminal(self):
     Distance2Terminal = np.linalg.norm(np.subtract(self.vector_agentState , self.Terminal))
     if Distance2Terminal**0.5 == 0: 
@@ -157,8 +157,8 @@ class Environment(object):
 
   #function for geting rewards
   def get_reward(self,state,action):
-#    ch, dist = self.channel()
-    reward = 0 # initialize the reward as 0
+
+    reward = 0 
 
     # agent doesn't achieve the goal
     if not self.Is_Terminal:
@@ -215,6 +215,6 @@ class Environment(object):
       if 0 <= state[0] - (x - delta) <= w  \
             and 0 <= state[1] - (y - delta) <= h :
         return True
-# Then it will be used in agent.py
+
 def final_states():
     return final_route  

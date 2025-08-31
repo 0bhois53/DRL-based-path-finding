@@ -31,9 +31,9 @@ plt.show()
 if len(selected_points) == 2:
     print(f"Start: {selected_points[0]}")
     print(f"Target: {selected_points[1]}")
-    with open('selected_points.txt', 'w') as f:
+    with open('DRL-based-path-finding/selected_points.txt', 'w') as f:
         f.write(f"{selected_points[0][0]},{selected_points[0][1]}\n")
         f.write(f"{selected_points[1][0]},{selected_points[1][1]}\n")
-    print("Coordinates saved to selected_points.txt")
+    print("Coordinates saved to DRL-based-path-finding/selected_points.txt")
 else:
     print("Selection incomplete. Please run again.")
