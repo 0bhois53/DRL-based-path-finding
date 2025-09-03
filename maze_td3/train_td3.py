@@ -1,5 +1,5 @@
 import gymnasium as gym
-from maze_env import MazeEnv
+from maze_env import MazeEnv, load_custom_points
 from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise
 import numpy as np
@@ -7,14 +7,16 @@ import os
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
-    env = MazeEnv()
+    # Load custom start/goal points if available
+    start_pos, goal_pos = load_custom_points()
+    env = MazeEnv(start_pos=start_pos, goal_pos=goal_pos)
     n_actions = env.action_space.shape[0]
     action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.2 * np.ones(n_actions))
     model = TD3(
         "MlpPolicy",
         env,
         action_noise=action_noise,
-        learning_rate=3e-4,
+        learning_rate=2e-4,
         buffer_size=50000,
         learning_starts=1000,
         batch_size=128,
@@ -77,14 +79,62 @@ if __name__ == "__main__":
         if done:
             break
     path = np.array(path)
+
+    # Path smoothening methods
+    def moving_average_path(path, window=3):
+        if len(path) < window:
+            return path
+        x = np.convolve(path[:,0], np.ones(window)/window, mode='same')
+        y = np.convolve(path[:,1], np.ones(window)/window, mode='same')
+        return np.stack([x, y], axis=1)
+
+    def bspline_path(path, s=2):
+        from scipy.interpolate import splprep, splev
+        if len(path) < 4:
+            return path
+        tck, u = splprep([path[:,0], path[:,1]], s=s)
+        unew = np.linspace(0, 1, max(100, len(path)*3))
+        out = splev(unew, tck)
+        return np.array(list(zip(out[0], out[1])))
+
+    # Original path
     plt.figure(figsize=(7,7))
     plt.imshow(env.obstacles.T, origin='lower', cmap='gray_r', alpha=0.5)
     plt.plot(path[:,0], path[:,1], 'g.-', label='Agent Path')
     plt.scatter(path[0,0], path[0,1], c='blue', s=100, label='Start')
     plt.scatter(env.goal_pos[0], env.goal_pos[1], c='red', s=100, label='Goal')
-    plt.title('TD3 Maze: Final Path')
+    plt.title('TD3 Maze: Final Path (Original)')
     plt.legend()
     plt.grid(True)
     plt.savefig('visuals/td3_maze_final_path.png', dpi=200)
     plt.show()
-    print('Final path plot saved to visuals/td3_maze_final_path.png')
+
+    # Moving average smoothened path
+    smoothed_ma = moving_average_path(path)
+    plt.figure(figsize=(7,7))
+    plt.imshow(env.obstacles.T, origin='lower', cmap='gray_r', alpha=0.5)
+    plt.plot(smoothed_ma[:,0], smoothed_ma[:,1], 'b-', label='Moving Average')
+    plt.scatter(smoothed_ma[0,0], smoothed_ma[0,1], c='blue', s=100, label='Start')
+    plt.scatter(env.goal_pos[0], env.goal_pos[1], c='red', s=100, label='Goal')
+    plt.title('TD3 Maze: Moving Average Path')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('visuals/td3_maze_final_path_moving_average.png', dpi=200)
+    plt.show()
+
+    # B-spline smoothened path
+    try:
+        smoothed_bspline = bspline_path(path)
+        plt.figure(figsize=(7,7))
+        plt.imshow(env.obstacles.T, origin='lower', cmap='gray_r', alpha=0.5)
+        plt.plot(smoothed_bspline[:,0], smoothed_bspline[:,1], 'r-', label='B-spline')
+        plt.scatter(smoothed_bspline[0,0], smoothed_bspline[0,1], c='blue', s=100, label='Start')
+        plt.scatter(env.goal_pos[0], env.goal_pos[1], c='red', s=100, label='Goal')
+        plt.title('TD3 Maze: B-spline Path')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('visuals/td3_maze_final_path_bspline.png', dpi=200)
+        plt.show()
+    except Exception as e:
+        print(f'B-spline smoothing failed: {e}')
+    print('Final path plots saved to visuals/td3_maze_final_path.png, td3_maze_final_path_moving_average.png, td3_maze_final_path_bspline.png')

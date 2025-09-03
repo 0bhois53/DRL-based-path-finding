@@ -25,7 +25,6 @@ gamma = 0.99
 num_episodes=500
 epsilon=eps =0.2
 Start_epsilon_decaying = 0
-#End_epsilon_decaying = num_episodes // 1
 End_epsilon_decaying = num_episodes
 epsilon_decaying = epsilon / (End_epsilon_decaying - Start_epsilon_decaying)
 

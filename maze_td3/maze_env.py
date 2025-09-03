@@ -1,3 +1,14 @@
+import os
+def load_custom_points(filename="selected_points.txt"):
+    if not os.path.exists(filename):
+        return None, None
+    with open(filename, "r") as f:
+        lines = f.read().strip().split("\n")
+        if len(lines) >= 2:
+            start = tuple(map(float, lines[0].split(",")))
+            goal = tuple(map(float, lines[1].split(",")))
+            return start, goal
+    return None, None
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
@@ -6,7 +17,7 @@ class MazeEnv(gym.Env):
     """10x10 grid maze environment for continuous pathfinding."""
     metadata = {'render_modes': ['human'], 'render_fps': 30}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, start_pos=None, goal_pos=None):
         super().__init__()
         self.grid_size = 10
         self.x_max = self.grid_size
@@ -14,15 +25,23 @@ class MazeEnv(gym.Env):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
         self.observation_space = spaces.Box(low=0.0, high=self.grid_size, shape=(4 + self.grid_size**2,), dtype=np.float32)
         self.render_mode = render_mode
-        self.max_steps = 300
+        self.max_steps = 400
         self.success_tolerance = 0.5
         self._generate_obstacles()
+        self._custom_start_pos = start_pos
+        self._custom_goal_pos = goal_pos
         self.reset()
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        self.agent_pos = np.array([0.0, 0.0], dtype=np.float32)
-        self.goal_pos = np.array([self.x_max - 1, self.y_max - 1], dtype=np.float32)
+        if self._custom_start_pos is not None:
+            self.agent_pos = np.array(self._custom_start_pos, dtype=np.float32)
+        else:
+            self.agent_pos = np.array([0.0, 0.0], dtype=np.float32)
+        if self._custom_goal_pos is not None:
+            self.goal_pos = np.array(self._custom_goal_pos, dtype=np.float32)
+        else:
+            self.goal_pos = np.array([self.x_max - 1, self.y_max - 1], dtype=np.float32)
         self.steps = 0
         self.done = False
         obs = self._get_obs()
@@ -73,7 +92,7 @@ class MazeEnv(gym.Env):
     def _generate_obstacles(self):
         # Randomly place obstacles, avoiding start and goal
         self.obstacles = np.zeros((self.grid_size, self.grid_size), dtype=np.float32)
-        num_obstacles = np.random.randint(7, 12)  # random number of obstacles
+        num_obstacles = np.random.randint(6, 12)  # random number of obstacles
         forbidden = {(0, 0), (self.grid_size - 1, self.grid_size - 1)}
         placed = 0
         while placed < num_obstacles:
