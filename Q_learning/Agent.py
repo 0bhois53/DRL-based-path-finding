@@ -11,15 +11,14 @@ from collections import namedtuple
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward', 'done'))
-
+# Replay memory class to store transitions
 class ReplayMemory(object):
     def __init__(self, capacity):
         self.capacity = capacity
         self.memory = []
         self.position = 0
-
+    #Adding new experience to memory
     def push(self, *args):
-        """Saves a transition."""
         if len(self.memory) < self.capacity:
             self.memory.append(None)
         self.memory[self.position] = Transition(*args)
@@ -30,118 +29,6 @@ class ReplayMemory(object):
 
     def __len__(self):
         return len(self.memory)
-
-    # Removed save_model and load_model methods from ReplayMemory as they are not applicable.
-
-class DQN(nn.Module):
-    def __init__(self, state_space_dim, action_space_dim, hidden):
-        super(DQN, self).__init__()
-        self.hidden = hidden
-        self.conv1 = nn.Conv2d(state_space_dim, 16, 4, 1)
-        self.conv2 = nn.Conv2d(16, 32, 4, 1)
-        self.fc1 = nn.Linear(5*5*32, 64)
-        self.fc4 = nn.Linear(64, action_space_dim) 
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))  
-        x = self.fc4(x)
-        return x
-
-class DQNAgent(object):
-    def __init__(self, state_space, n_actions, replay_buffer_size,
-                 batch_size, hidden_size, gamma):
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.n_actions = n_actions
-        self.state_space_dim = state_space
-        self.policy_net = DQN(state_space, n_actions, hidden_size).to(self.device)
-        self.target_net = DQN(state_space, n_actions, hidden_size).to(self.device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()
-
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=1e-3)
-        self.memory = ReplayMemory(replay_buffer_size)
-        self.batch_size = batch_size
-        self.gamma = gamma
-
-    def save_model(self, filepath):
-        """Save the model state dictionary to a file."""
-        torch.save({
-            'policy_net_state_dict': self.policy_net.state_dict(),
-            'target_net_state_dict': self.target_net.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-        }, filepath)
-
-    def load_model(self, filepath):
-        """Load the model state dictionary from a file."""
-        checkpoint = torch.load(filepath)
-        self.policy_net.load_state_dict(checkpoint['policy_net_state_dict'])
-        self.target_net.load_state_dict(checkpoint['target_net_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        self.target_net.eval()
-
-    def update_network(self, updates=1):
-        for _ in range(updates):
-            self._do_network_update()
-
-    def _do_network_update(self):
-        if len(self.memory) < self.batch_size:
-            return
-        transitions = self.memory.sample(self.batch_size)
-        #print(transitions)
-        batch = Transition(*zip(*transitions))
-        
-
-        non_final_mask = 1 - torch.tensor(batch.done, dtype=torch.uint8)
-        non_final_next_states = [s for nonfinal, s in zip(non_final_mask,
-                                                          batch.next_state) if nonfinal > 0]
-        non_final_next_states = torch.stack(non_final_next_states).to(self.device)
-        state_batch = torch.stack(batch.state).to(self.device)
-        action_batch = torch.cat(batch.action).to(self.device)
-        reward_batch = torch.cat(batch.reward).to(self.device)
-
-        self.optimizer.zero_grad()
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
-
-        next_state_values = torch.zeros(self.batch_size).to(self.device)
-        next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
-        expected_state_action_values = reward_batch + self.gamma * next_state_values
-
-        # Compute Huber loss
-        loss = F.smooth_l1_loss(state_action_values.squeeze(),
-                                expected_state_action_values)
-
-        # Optimize the model
-        loss.backward()
-        for param in self.policy_net.parameters():
-            if param.grad is not None:
-                param.grad.data.clamp_(-1e-1, 1e-1)
-        self.optimizer.step()
-
-    def get_action(self, state, epsilon):
-        sample = random.random()
-        #print(state)
-        #print(state.shape)
-        if sample > epsilon:
-            with torch.no_grad():
-                state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
-                q_values = self.policy_net(state).to(self.device)
-                return torch.argmax(q_values).item()
-        else:
-          return random.randrange(self.n_actions)
-
-    def update_target_network(self):
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-
-    def store_transition(self, state, action, next_state, reward, done):
-        action = torch.Tensor([[action]]).long()
-        reward = torch.tensor([reward], dtype=torch.float32)
-        next_state = torch.from_numpy(next_state).float()
-        state = torch.from_numpy(state).float()
-        self.memory.push(state, action, next_state, reward, done)
-
 
 
 # Creating class for the Q-learning table
@@ -167,13 +54,10 @@ class QLearningTable:
         # Selection of the action - 90 % according to the epsilon == 0.9
         # Choosing the best action
         sample = random.random()
-        #print(state)
-        #print(state.shape)
+        
         if sample > epsilon:
             state_action = self.q_table.loc[observation, :] 
-           # print(state_action)
             state_action = state_action.reindex(np.random.permutation(state_action.index))
-           # print(state_action)
             action = state_action.idxmax()
         else:
             # Choosing random action - left 10 % for choosing randomly
@@ -197,7 +81,7 @@ class QLearningTable:
         self.q_table.loc[state, action] += self.lr * (q_target - q_predict) 
 
         return self.q_table.loc[state, action]
-
+    # Save the model
     def save_model(self, filepath):
         """Save the Q-tables to a file."""
         save_data = {
@@ -208,7 +92,7 @@ class QLearningTable:
             'epsilon': self.epsilon
         }
         pd.to_pickle(save_data, filepath)
-        
+    #load the model
     def load_model(self, filepath):
         """Load the Q-tables from a file."""
         save_data = pd.read_pickle(filepath)

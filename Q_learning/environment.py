@@ -23,7 +23,7 @@ class Environment(object):
     print(f"Start grid position: ({start_grid_x}, {start_grid_y})")
     print(f"Target grid position: ({target_grid_x}, {target_grid_y})")
 
-    # Generate random number of obstacles between 8 and 15
+    # Generate random number of obstacles between 8 and 16
     num_obstacles = np.random.randint(8, 16)
     
     # Generate random obstacle positions, avoiding initial and target positions
@@ -74,7 +74,7 @@ class Environment(object):
     self.agentState = np.copy(self.state0) # state of the agent
     self.Terminal = np.asarray(target_position)  # terminal 2
     self.doneType = 0 
-    self.max_episode_steps = 10000 
+    self.max_episode_steps = 1000 
     self.steps_counter = 0 
     self.num_actions = num_actions #number of actions
 
@@ -171,9 +171,9 @@ class Environment(object):
           next_state_flag = 'obstacle'
       else:
           if action==0 or action==1 or action==2 or action==3:
-            reward=-1
-          else:
             reward=-1.5
+          else:
+              reward=-1.0
           next_state_flag = 'continue'
 
     elif self.doneType == 1:

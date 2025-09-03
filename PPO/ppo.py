@@ -4,13 +4,8 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 from environment import Environment, final_states
-import random
 import os
-from collections import deque
 from scipy.interpolate import splprep, splev
-import time
-import psutil
-
 
 
 os.makedirs('PPO_runs', exist_ok=True)
@@ -55,7 +50,7 @@ class Critic(nn.Module):
 		x = torch.relu(self.fc2(x))
 		x = self.fc3(x)
 		return x
-
+# PPO Agent
 class PPOAgent:
 	def __init__(self, state_dim, action_dim, lr=2e-4, gamma=0.999, clip=0.2, update_epochs=15, 
 				 hidden_dim=256, entropy_coeff=0.045, device=None):
@@ -89,7 +84,7 @@ class PPOAgent:
 			'critic': self.critic.state_dict(),
 			'optimizer': self.optimizer.state_dict()
 		}, path)
-
+    
 	def load(self, path):
 		checkpoint = torch.load(path)
 		self.actor.load_state_dict(checkpoint['actor'])
@@ -106,7 +101,7 @@ def spline_smooth_path(path, s=2):
 	path = np.array(path)
 	# Remove duplicate points
 	unique_points = list(dict.fromkeys(map(tuple, path)))
-	# Validate points: must be at least 4, all finite numbers, and shape (N,2)
+	
 	if len(unique_points) < 4:
 		return path
 	try:
@@ -126,7 +121,7 @@ def spline_smooth_path(path, s=2):
 
 # Training and visualization
 def train_ppo(env, agent, episodes=500, max_steps=300, batch_size=128, save_path='PPO_runs/ppo_gridworld.pt'):
-	all_rewards = []
+	all_rewards = []  # Stores episode rewards
 	all_steps = []
 	best_path = None
 	best_steps = float('inf')
@@ -141,13 +136,13 @@ def train_ppo(env, agent, episodes=500, max_steps=300, batch_size=128, save_path
 		done = False
 		while not done and ep_steps < max_steps:
 			action, log_prob, entropy = agent.select_action(state_flat)
-			next_state, next_state_flag, reward, done, _ = env.step(action)
+			next_state, reward, done, _ = env.step(action)
 			next_state_flat = next_state.flatten()
 			traj.append((state_flat, action, log_prob, reward, next_state_flat, done))
-			ep_reward += reward
+			ep_reward += reward  # Accumulate reward per step
 			ep_steps += 1
 			state_flat = next_state_flat
-		all_rewards.append(ep_reward)
+		all_rewards.append(ep_reward)  # Store episode reward at end of episode
 		all_steps.append(ep_steps)
 		memory.extend(traj)
 		# Save best path
@@ -182,10 +177,11 @@ def train_ppo(env, agent, episodes=500, max_steps=300, batch_size=128, save_path
 		if (ep+1) % 50 == 0:
 			agent.save(save_path)
 		print(f"Episode {ep+1}: Reward={ep_reward}, Steps={ep_steps}")
+		np.savetxt('rewards_ppo.txt', all_rewards)
 	# Final save
 	agent.save(save_path)
+
 	# Visualizations
-	# Save accumulated rewards
 	plt.figure(tight_layout=True)
 	plt.plot(range(len(all_rewards)), all_rewards, label='cumulative rewards', color='b')
 	plt.xlabel('Episode',size = '14')
@@ -291,6 +287,10 @@ def plot_path(path, filename, title):
 
 # Interactive menu for path smoothening and animation
 def interactive_menu(path):
+	env = globals().get('env', None)
+	# Ensure path starts at start point before smoothing
+	if env and not np.allclose(path[0], env.vector_state0):
+		path = np.vstack([env.vector_state0, path])
 	print("Select path smoothening algorithm:")
 	print("1. Moving Average")
 	print("2. Spline Interpolation")
@@ -354,4 +354,6 @@ if __name__ == "__main__":
 	# Interactive menu for path animation
 	if final_path:
 		interactive_menu(final_path)
+
+
 

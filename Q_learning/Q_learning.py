@@ -35,11 +35,6 @@ n_actions = 8
 starting_position, target_position = load_selected_points()
 env = Environment(starting_position, target_position, 100, 100, n_actions)
 
-# Create directory for saving models
-import os
-os.makedirs('saved_models_Q_learning', exist_ok=True)
-os.makedirs('Q_learning_visuals', exist_ok= True)
-
 def update():
     import time
     try:
@@ -51,10 +46,9 @@ def update():
     process = None
     if psutil_available:
         process = psutil.Process(os.getpid())
-    # Resulted list for the plotting Episodes via Steps
     Num_steps = []
     # Summed costs for all episodes in resulted list
-    cumulative_rewards = []
+    cumulative_rewards = []  # Stores episode rewards
 
     final_path=[]
     visited_X = [starting_position[0]]
@@ -82,7 +76,7 @@ def update():
             next_state, next_state_flag,reward, done, _ = env.step(action) 
 
             # agent learns from this transition and calculating the cost
-            cum_reward += agent.learn(str(state), action, reward, str(next_state),next_state_flag)
+            cum_reward += agent.learn(str(state), action, reward, str(next_state),next_state_flag)  # Accumulate reward per step
 
             # Swapping the states - current and next
             state = next_state
@@ -90,19 +84,16 @@ def update():
             # Calculating number of Steps in the current Episode
             number_of_steps_taken_to_terminal += 1
 
-            # Break while loop when it is the end of current Episode
             # When agent reached the goal or obstacle
             if done:
                 print('number of steps taken by the agent: ', number_of_steps_taken_to_terminal)
                 Num_steps.append(number_of_steps_taken_to_terminal)
-                cumulative_rewards.append(cum_reward)
+                cumulative_rewards.append(cum_reward)  # Store episode reward at end of episode
                 
                 # Save model if it achieves better reward
                 if len(cumulative_rewards) == 1 or cum_reward > max(cumulative_rewards[:-1]):
                     agent.save_model(r'T:\PPO\DRL-based-path-finding\Q_learning\saved_models_Q_learning\q_learning_best_model.pkl')
                     print(f"New best model saved with reward: {cum_reward}")
-                
-
                 print("episode: %d: reward: %6.2f" % ( ep, cum_reward))
                 print("**********************************************")
                 break
@@ -139,7 +130,7 @@ def update():
         print(f"Training Time: {training_time:.2f} seconds")
         print("psutil not installed. To track CPU and memory usage, run 'pip install psutil'.")
 
-    plt.figure(tight_layout=True)
+    plt.figure(tight_layout=True) # Plotting cumulative rewards
     plt.plot(range(num_episodes), cumulative_rewards, label='cumulative rewards', color='b')
     plt.xlabel('Episode',size = '14')
     plt.ylabel('Accumulated reward', size = '14')
@@ -148,7 +139,7 @@ def update():
     plt.yticks(size = '12')
     plt.savefig(r'T:\PPO\DRL-based-path-finding\Q_learning\Q_learning_visuals\Q_learning_Accumulated_Reward.png', format='png', dpi=300)
 
-    plt.figure(tight_layout=True)
+    plt.figure(tight_layout=True) # Plotting steps taken
     plt.plot(range(num_episodes), Num_steps, color='b')
     plt.xlabel('Episode',size = '14')
     plt.ylabel('Taken steps', size = '14')
@@ -195,8 +186,7 @@ def update():
     for i in range(len(x_o)):
         rectangle = mpatches.Rectangle((10 * (x_o[i] - 0.5), 10 * (10 - y_o[i] - 0.5)), obstacle_width, obstacle_width, fc='blue', ec='blue')
         plt.gca().add_patch(rectangle)
-
-    #plt.scatter(10,10, marker = "s", ec = 'k', c ='red', s=50, label ="Terminal")
+  
     plt.scatter(starting_position[0], starting_position[1], edgecolors='k', facecolors='red', s=100, label="Start")
     plt.scatter(target_position[0], target_position[1], edgecolors='k', facecolors='red', s=100, label="Target")
     plt.grid(linestyle=':')
@@ -204,7 +194,6 @@ def update():
     plt.ylim(0,100)
     plt.xlabel('x (m)',size = '14')
     plt.ylabel('y (m)',size = '14')
-    #plt.legend(loc=4)
     plt.xticks(size = '12')
     plt.yticks(size = '12')
     plt.gca().set_aspect('equal', adjustable='box')
@@ -220,7 +209,6 @@ def update():
         rectangle = mpatches.Rectangle((10 * (x_o[i] - 0.5), 10 * (10 - y_o[i] - 0.5)), obstacle_width, obstacle_width, fc='blue', ec='blue')
         plt.gca().add_patch(rectangle)
 
-    #plt.scatter(10,10, marker = "s", ec = 'k', c ='red', s=50, label ="Terminal")
     plt.scatter(starting_position[0], starting_position[1], edgecolors='k', facecolors='red', s=100, label="Start")
     plt.scatter(target_position[0], target_position[1], edgecolors='k', facecolors='red', s=100, label="Target")
     plt.grid(linestyle=':')
@@ -228,14 +216,12 @@ def update():
     plt.ylim(0,100)
     plt.xlabel('x (m)',size = '14')
     plt.ylabel('y (m)',size = '14')
-    #plt.legend(loc=4)
     plt.xticks(size = '12')
     plt.yticks(size = '12')
     plt.gca().set_aspect('equal', adjustable='box')
     plt.savefig(r'T:\PPO\DRL-based-path-finding\Q_learning\Q_learning_visuals\Q_learning_Final_Path.png', format='png', dpi=300)
     plt.show()
-    # # Plotting the results
-    
+    # Plotting the results
     # Return evaluation results for comparison
     return None, randomized_eval_results
 
@@ -265,7 +251,6 @@ def evaluate_model(agent, env, num_eval_episodes=10, model_path=r'T:\PPO\DRL-bas
         start_pos = [env.vector_state0[0], env.vector_state0[1]]
     if target_pos is None:
         target_pos = [env.Terminal[0], env.Terminal[1]]
-    
     success_count = 0
     total_rewards = []
     total_steps = []
@@ -289,7 +274,6 @@ def evaluate_model(agent, env, num_eval_episodes=10, model_path=r'T:\PPO\DRL-bas
         eval_path_y = [eval_env.vector_agentState[1]]
         
         while not done and steps < eval_env.max_episode_steps:
-            # Use greedy action (epsilon=0) for evaluation
             # Save current epsilon and set to 0 for greedy evaluation
             original_epsilon = agent.epsilon
             agent.epsilon = 0.0
@@ -330,7 +314,6 @@ def evaluate_model(agent, env, num_eval_episodes=10, model_path=r'T:\PPO\DRL-bas
                 rectangle = mpatches.Rectangle((10 * (eval_env.Obstacle_x[i] - 0.5), 10 * (10 - eval_env.Obstacle_y[i] - 0.5)), 
                                                 obstacle_width, obstacle_width, fc='blue', ec="darkblue", alpha=0.8)
                 plt.gca().add_patch(rectangle)
-
             plt.xlim(0, 100)
             plt.ylim(0, 100)
             plt.xlabel('x (m)', fontsize=12)
@@ -384,10 +367,6 @@ def evaluate_model(agent, env, num_eval_episodes=10, model_path=r'T:\PPO\DRL-bas
         'environments': evaluation_environments
     }
 
-
-
-
-
 if __name__ == "__main__":
     import sys
     
@@ -417,13 +396,13 @@ if __name__ == "__main__":
     generalization_performance = randomized_eval_results['success_rate']
     print(f"Generalization Performance: {generalization_performance:.1f}%")
     if randomized_eval_results['success_rate'] >= 70:
-        print("✅ EXCELLENT: Agent shows strong generalization to new environments!")
+        print("EXCELLENT: Agent shows strong generalization to new environments!")
     elif randomized_eval_results['success_rate'] >= 50:
-        print("✅ GOOD: Agent shows decent generalization to new environments!")
+        print("GOOD: Agent shows decent generalization to new environments!")
     elif randomized_eval_results['success_rate'] >= 30:
-        print("⚠️  FAIR: Agent shows limited generalization to new environments.")
+        print("FAIR: Agent shows limited generalization to new environments.")
     else:
-        print("❌ POOR: Agent struggles to generalize to new environments.")
+        print("POOR: Agent struggles to generalize to new environments.")
     
     # Ask user if they want to see animated evaluation
     try:
@@ -434,24 +413,20 @@ if __name__ == "__main__":
             print("2. Randomized environment only") 
             print("3. Multiple randomized environments (3 episodes)")
             print("4. Comparison (Training vs Randomized)")
-            
             try:
                 choice = input("Enter your choice (1-4): ").strip()
-                
                 if choice == '1':
                     print("Creating training environment animation...")
                     from q_learning_animation import animate_evaluation
                     anim, results = animate_evaluation(agent, env, starting_position, target_position,
                                                      model_path=r'T:\PPO\DRL-based-path-finding\Q_learning\saved_models_Q_learning\q_learning_final_model.pkl',
                                                      save_gif=False, interval=600, use_randomized_env=False)
-                
                 elif choice == '2':
                     print("Creating randomized environment animation...")
                     from q_learning_animation import animate_evaluation
                     anim, results = animate_evaluation(agent, env, starting_position, target_position,
                                                      model_path=r'T:\PPO\DRL-based-path-finding\Q_learning\saved_models_Q_learning\q_learning_final_model.pkl',
                                                      save_gif=False, interval=600, use_randomized_env=True)
-
                 elif choice == '3':
                     print("Creating multiple randomized environment animations...")
                     from q_learning_animation import animate_randomized_evaluations
@@ -459,19 +434,19 @@ if __name__ == "__main__":
                                                                    num_episodes=3,
                                                                    model_path=r'T:\PPO\DRL-based-path-finding\Q_learning\saved_models_Q_learning\q_learning_final_model.pkl',
                                                                    save_gifs=False, interval=600)
-                
                 elif choice == '4':
                     print("Creating comparison animations...")
                     from q_learning_animation import animate_comparison
                     comparison_results = animate_comparison(agent, env, starting_position, target_position,
                                                           model_path=r'T:\PPO\DRL-based-path-finding\Q_learning\saved_models_Q_learning\q_learning_final_model.pkl',
                                                           save_gifs=False, interval=600)
-                
                 else:
                     print("Invalid choice. Skipping animation.")
                     
             except (ValueError, KeyboardInterrupt):
                 print("Invalid input or cancelled. Skipping animation.")
+    except Exception as e:
+        print(f"Error during animation selection: {e}")
                 
-    except KeyboardInterrupt:
-        print("\nSkipping animated evaluation.")
+
+

@@ -8,6 +8,7 @@ from matplotlib.patches import Rectangle
 import matplotlib.animation as animation
 import numpy as np
 from environment import obstacle_width
+from scipy.interpolate import splprep, splev
 
 # Path smoothing functions
 
@@ -26,7 +27,6 @@ def moving_average_path(path, window_size=3):
 def b_spline_path(path, degree=3, num_points=100):
     if len(path) <= degree:
         return path
-    from scipy.interpolate import splprep, splev
     x, y = zip(*path)
     tck, u = splprep([x, y], s=0, k=degree)
     u_new = np.linspace(0, 1, num_points)
@@ -61,7 +61,7 @@ def animate_evaluation(agent, env, starting_position, target_position,
     except Exception as e:
         print(f"Error loading model: {e}. Using current agent state.")
     
-    # Run one episode to collect the path
+    
     state = env.reset()
     done = False
     episode_reward = 0
@@ -76,7 +76,7 @@ def animate_evaluation(agent, env, starting_position, target_position,
         # Use greedy action for evaluation (epsilon=0)
         action = agent.get_action(state, epsilon=0.0)
         
-        # Get Q-values for visualization (if available)
+        # Get Q-values for visualization 
         try:
             # Get Q-values from the DQN for the current state
             state_tensor = agent.preprocess_state(state) if hasattr(agent, 'preprocess_state') else state
@@ -149,9 +149,9 @@ def animate_evaluation(agent, env, starting_position, target_position,
                 rectangle = Rectangle((10 * (env.Obstacle_x[i] - 0.5), 10 * (10 - env.Obstacle_y[i] - 0.5)), 
                                     obstacle_width, obstacle_width, fc='blue', ec="blue", alpha=0.8)
                 ax1.add_patch(rectangle)
-            ax1.scatter(starting_position[0], starting_position[1], c='green', s=150, marker='s', 
+            ax1.scatter(starting_position[0], starting_position[1], c='green', s=150, 
                     label="Start", edgecolors='black', linewidth=2)
-            ax1.scatter(target_position[0], target_position[1], c='red', s=150, marker='s', 
+            ax1.scatter(target_position[0], target_position[1], c='red', s=150, 
                     label="Goal", edgecolors='black', linewidth=2)
             if frame > 0:
                 path_x = [pos[0] for pos in smoothed_positions[:frame+1]]
@@ -160,7 +160,7 @@ def animate_evaluation(agent, env, starting_position, target_position,
                 if len(path_x) > 1:
                     ax1.scatter(path_x[:-1], path_y[:-1], c='orange', s=30, alpha=0.6)
             current_pos = smoothed_positions[frame]
-            ax1.scatter(current_pos[0], current_pos[1], c='purple', s=200, marker='o', 
+            ax1.scatter(current_pos[0], current_pos[1], c='purple', s=200, 
                     label='DQN Agent', edgecolors='white', linewidth=3, zorder=10)
             if frame > 0 and frame < len(smoothed_positions):
                 prev_pos = smoothed_positions[frame-1]
@@ -404,10 +404,3 @@ def run_animated_evaluation(agent, env, starting_position, target_position, spee
                             save_gif=True, interval=interval)
 
 
-if __name__ == "__main__":
-    print("This is an animation module for DQN evaluation.")
-    print("Import this module and use animate_evaluation() or animate_training_episode() functions.")
-    print("Example usage:")
-    print("  from dqn_animation import animate_evaluation, animate_training_episode")
-    print("  anim, results = animate_evaluation(agent, env, start_pos, target_pos)")
-    print("  anim, results = animate_training_episode(agent, env, start_pos, target_pos, episode_num=50)")

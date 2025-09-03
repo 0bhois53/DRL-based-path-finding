@@ -124,7 +124,7 @@ if __name__=="__main__":
     env.reset()
 
     # Training loop
-    cumulative_rewards = []
+    cumulative_rewards = []  # Stores episode rewards
     Num_steps = []
     counter_reach_goal = 0
 
@@ -157,8 +157,6 @@ if __name__=="__main__":
         visited_X_final = []
         visited_Y_final = []
 
-
-         
         
         #print("episode number: ",ep)
         while not done and counter < env.max_episode_steps:
@@ -169,7 +167,7 @@ if __name__=="__main__":
 
             next_state,next_state_flag, reward, done, _ = env.step(action)
         
-            cum_reward += reward
+            cum_reward += reward  # Accumulate reward per step
             
             agent.store_transition(state, action, next_state, reward, done) 
             agent.update_network() 
@@ -178,16 +176,16 @@ if __name__=="__main__":
             counter +=1
             number_of_steps_taken_to_terminal  += 1
         
-        #print(state)
+       
         if done:
-            # Enhanced logging with performance tracking
+            #  logging with performance tracking
             path_efficiency = number_of_steps_taken_to_terminal / max(1, len(visited_X_final))
             performance_tracker.log_episode(ep, cum_reward, number_of_steps_taken_to_terminal, 
                                            next_state_flag == 'goal', path_efficiency)
             
             print(f'Episode {ep}: Steps: {number_of_steps_taken_to_terminal}, Reward: {cum_reward:.2f}')
             Num_steps.append(number_of_steps_taken_to_terminal)
-            cumulative_rewards.append(cum_reward)
+            cumulative_rewards.append(cum_reward)  # Store episode reward at end of episode
             print("episode: %d: reward: %6.2f" % ( ep, cum_reward))
             
             # Dynamic analysis every 25 episodes
@@ -197,20 +195,17 @@ if __name__=="__main__":
                       f"Stability: {analysis.get('learning_stability', 0):.3f}")
             
             print("**********************************************")
-            # Count success if agent reached the goal (customize if needed)
+            # Count success if agent reached the goal 
             if next_state_flag == 'goal':
                 counter_reach_goal += 1
             # Save model if it achieves better reward
             if cum_reward > best_reward:
                 best_reward = cum_reward
                 agent.save_model(f'DRL-based-path-finding/saved_models/dqn_best_model.pth')
-            # Save checkpoint every 50 episodes
-            if ep % 50 == 0:
-                agent.save_model(f'DRL-based-path-finding/saved_models/dqn_checkpoint_ep{ep}.pth')
 
-        # Update the target network, copying all weights and biases in DQN
         if ep % TARGET_UPDATE == 0:
             agent.update_target_network()
+        np.savetxt('rewards_dqn.txt', cumulative_rewards)    
     env.final()
 
     # Save final model
@@ -236,7 +231,7 @@ if __name__=="__main__":
             eval_path_y = [env.vector_agentState[1]]
             
             while not done and steps < env.max_episode_steps:
-                # Use greedy action (epsilon=0) for evaluation
+               
                 action = agent.get_action(state, epsilon=0.0)
                 next_state, next_state_flag, reward, done, _ = env.step(action)
                 
@@ -301,7 +296,7 @@ if __name__=="__main__":
     print(f"Average CPU usage per episode: {np.mean(cpu_usages):.2f}%")
     print(f"Peak memory usage: {np.max(mem_usages):.2f} MB")
 
-    # Plot cumulative rewards (adjust range to match actual data length)
+    # Plot cumulative rewards 
     plt.figure(tight_layout=True)
     plt.plot(range(len(cumulative_rewards)), cumulative_rewards, label='cumulative rewards', color='b')
     plt.xlabel('Episode',size = '14')
@@ -311,7 +306,7 @@ if __name__=="__main__":
     plt.yticks(size = '12')
     plt.savefig('DRL-based-path-finding/DQN_visuals/DQN_Accumulated_Reward.png', format='png', dpi=300)
 
-    # Plot number of steps (adjust range to match actual data length)
+    # Plot number of steps 
     plt.figure(tight_layout=True)
     plt.plot(range(len(Num_steps)), Num_steps, color='b')
     plt.xlabel('Episode',size = '14')
@@ -336,7 +331,6 @@ if __name__=="__main__":
     y_final = np.append(np.array(visited_Y_final), env.Terminal[1])
 
     # B-spline smoothing for final path
-    # Only apply B-spline smoothing if enough unique points
     unique_points = list(dict.fromkeys(zip(x_final, y_final)))
     if len(unique_points) >= 4:
         x_unique, y_unique = zip(*unique_points)
@@ -349,11 +343,8 @@ if __name__=="__main__":
     y_o = env.Obstacle_y
 
     plt.figure()
-
-   
     plt.quiver(x_shortest[:-1], y_shortest[:-1], x_shortest[1:]-x_shortest[:-1], y_shortest[1:]-y_shortest[:-1], scale_units='xy', angles='xy', scale=1)
-
-    # Plot smoothed path (B-spline)
+   # Plot smoothed path (B-spline)
     plt.plot(x_smooth, y_smooth, color='orange', linewidth=2, label='Smoothed Path (B-spline)')
 
 
@@ -363,7 +354,7 @@ if __name__=="__main__":
                                 obstacle_width, obstacle_width, fc='blue', ec="blue")
         plt.gca().add_patch(rectangle)
 
-    #plt.scatter(10,10, marker = "s", ec = 'k', c ='red', s=50, label ="Terminal")
+    
     plt.scatter(starting_position[0],starting_position[1], ec = 'k', c ='red', s=100, label ="Start")
     plt.scatter(target_position[0],target_position[1], ec = 'k', c ='red', s =100,label="Target")
     plt.grid(linestyle=':')
@@ -371,7 +362,6 @@ if __name__=="__main__":
     plt.ylim(0,100)
     plt.xlabel('x (m)',size = '14')
     plt.ylabel('y (m)',size = '14')
-    #plt.legend(loc=4)
     plt.xticks(size = '12')
     plt.yticks(size = '12')
     plt.gca().set_aspect('equal', adjustable='box')
@@ -384,13 +374,13 @@ if __name__=="__main__":
     # Plot smoothed path (B-spline)
     plt.plot(x_smooth, y_smooth, color='orange', linewidth=2, label='Smoothed Path (B-spline)')
 
-    #plt.scatter(x_s, y_s, c = 'k' ,marker = "o",label = 'Sensor')
+
 
     rectangle = Rectangle(( 10* (x_o[i]-0.5), 10*(10 - y_o[i] -0.5)), obstacle_width, obstacle_width, fc='blue',ec="blue")
     plt.gca().add_patch(rectangle)
     plt.gca().add_patch(rectangle)
 
-    #plt.scatter(10,10, marker = "s", ec = 'k', c ='red', s=50, label ="Terminal")
+
     plt.scatter(starting_position[0],starting_position[1], ec = 'k', c ='red', s=100, label ="Start")
     plt.scatter(target_position[0],target_position[1], ec = 'k', c ='red', s =100,label="Target")
     plt.grid(linestyle=':')
@@ -398,7 +388,6 @@ if __name__=="__main__":
     plt.ylim(0,100)
     plt.xlabel('x (m)',size = '14')
     plt.ylabel('y (m)',size = '14')
-    #plt.legend(loc=4)
     plt.xticks(size = '12')
     plt.yticks(size = '12')
     plt.gca().set_aspect('equal', adjustable='box')
@@ -420,12 +409,6 @@ if __name__=="__main__":
                 anim, results = animate_evaluation(agent, env, starting_position, target_position,
                                                  model_path='DRL-based-path-finding/saved_models/dqn_final_model.pth',
                                                  save_gif=True, interval=600)
-            elif sys.argv[1] == '--animate-fast':
-                print("Running fast animated evaluation...")
-                from dqn_animation import animate_evaluation
-                anim, results = animate_evaluation(agent, env, starting_position, target_position,
-                                                 model_path='DRL-based-path-finding/saved_models/dqn_final_model.pth',
-                                                 save_gif=True, interval=300)
             elif sys.argv[1] == '--animate-training':
                 print("Running animated training episode...")
                 from dqn_animation import animate_training_episode
@@ -456,4 +439,9 @@ if __name__=="__main__":
         print("Continuing without animation...")
     
     print("\nDQN training and evaluation completed!")
+
+
+
+# Replace with your reward list variable
+np.savetxt('rewards_dqn.txt', cumulative_rewards)
 
