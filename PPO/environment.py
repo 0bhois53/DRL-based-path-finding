@@ -171,9 +171,9 @@ class Environment(object):
           next_state_flag = 'obstacle'
       else:
           if action==0 or action==1 or action==2 or action==3:
-            reward=-1.5
+            reward=-1.0
           else:
-            reward=-1.5
+            reward=-1.1
           next_state_flag = 'continue'
 
     elif self.doneType == 1:

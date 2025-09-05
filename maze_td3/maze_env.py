@@ -17,7 +17,7 @@ class MazeEnv(gym.Env):
     """10x10 grid maze environment for continuous pathfinding."""
     metadata = {'render_modes': ['human'], 'render_fps': 30}
 
-    def __init__(self, render_mode=None, start_pos=None, goal_pos=None):
+    def __init__(self, render_mode='human', start_pos=None, goal_pos=None):
         super().__init__()
         self.grid_size = 10
         self.x_max = self.grid_size
@@ -25,7 +25,7 @@ class MazeEnv(gym.Env):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
         self.observation_space = spaces.Box(low=0.0, high=self.grid_size, shape=(4 + self.grid_size**2,), dtype=np.float32)
         self.render_mode = render_mode
-        self.max_steps = 400
+        self.max_steps = 600
         self.success_tolerance = 0.5
         self._generate_obstacles()
         self._custom_start_pos = start_pos

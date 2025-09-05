@@ -11,7 +11,7 @@ from scipy.interpolate import splprep, splev
 os.makedirs('PPO_runs', exist_ok=True)
 os.makedirs('PPO_visuals', exist_ok=True)
 
-def load_selected_points(filename=r'T:\PPO\DRL-based-path-finding\PPO\selected_points.txt'):
+def load_selected_points(filename='T:/PPO/DRL-based-path-finding/PPO/selected_points.txt'):
     try:
         with open(filename, 'r') as f:
             lines = f.readlines()
@@ -136,7 +136,7 @@ def train_ppo(env, agent, episodes=500, max_steps=300, batch_size=128, save_path
 		done = False
 		while not done and ep_steps < max_steps:
 			action, log_prob, entropy = agent.select_action(state_flat)
-			next_state, reward, done, _ = env.step(action)
+			next_state, next_state_flag, reward, done, _ = env.step(action)
 			next_state_flat = next_state.flatten()
 			traj.append((state_flat, action, log_prob, reward, next_state_flat, done))
 			ep_reward += reward  # Accumulate reward per step
@@ -247,13 +247,47 @@ def train_ppo(env, agent, episodes=500, max_steps=300, batch_size=128, save_path
 		plt.savefig(filename, format='png', dpi=300)
 		plt.close()
 
-	# Shortest path visualization
+	# Shortest path visualization (smoothed)
 	if best_path:
-		plot_path_with_obstacles(best_path, r'T:\PPO\DRL-based-path-finding\PPO\PPO_runs\ppo_shortest_path.png', 'Shortest Steps Path', env)
-	# Final path visualization
+		plot_path_with_obstacles(best_path, r'T:\PPO\DRL-based-path-finding\PPO\PPO_runs\ppo_shortest_path.png', 'Shortest Steps Path (Smoothed)', env)
+		# Original path visualization (no smoothing)
+		def plot_path_original(path, filename, title, env):
+			from matplotlib.patches import Rectangle
+			path = np.array(path)
+			if not np.allclose(path[0], env.vector_state0):
+				path = np.vstack([env.vector_state0, path])
+			x = path[:,0]
+			y = path[:,1]
+			plt.figure()
+			plt.quiver(x[:-1], y[:-1], x[1:]-x[:-1], y[1:]-y[:-1], scale_units='xy', angles='xy', scale=1)
+			plt.plot(x, y, color='green', linewidth=2, label='Original Path')
+			for i in range(len(env.Obstacle_x)):
+				rectangle = Rectangle((10 * (env.Obstacle_x[i] - 0.5), 10 * (10 - env.Obstacle_y[i] - 0.5)), 
+									  env.obstacle[i][2], env.obstacle[i][3], fc='blue', ec="blue")
+				plt.gca().add_patch(rectangle)
+			plt.scatter(env.vector_state0[0], env.vector_state0[1], ec = 'k', c ='red', s=100, label ="Start")
+			plt.scatter(env.Terminal[0], env.Terminal[1], ec = 'k', c ='red', s =100,label="Target")
+			plt.grid(linestyle=':')
+			plt.xlim(0,100)
+			plt.ylim(0,100)
+			plt.xlabel('x (m)',size = '14')
+			plt.ylabel('y (m)',size = '14')
+			plt.xticks(size = '12')
+			plt.yticks(size = '12')
+			plt.gca().set_aspect('equal', adjustable='box')
+			plt.title(title)
+			plt.savefig(filename, format='png', dpi=300)
+			plt.close()
+		plot_path_original(best_path, r'T:\PPO\DRL-based-path-finding\PPO\PPO_runs\ppo_shortest_path_original.png', 'Shortest Steps Path (Original)', env)
+	# Final path visualization (smoothed)
 	if final_path:
-		plot_path_with_obstacles(final_path, r'T:\PPO\DRL-based-path-finding\PPO\PPO_runs\ppo_final_path.png', 'Final Path', env)
+		plot_path_with_obstacles(final_path, r'T:\PPO\DRL-based-path-finding\PPO\PPO_runs\ppo_final_path.png', 'Final Path (Smoothed)', env)
+		# Final path original visualization
+		plot_path_original(final_path, r'T:\PPO\DRL-based-path-finding\PPO\PPO_runs\ppo_final_path_original.png', 'Final Path (Original)', env)
 	return best_path, final_path, all_rewards, all_steps
+
+
+	# (Removed erroneous unsmoothed path plotting block; use plot_path_with_obstacles for path visualization)
 
 def compute_gae(agent, rewards, states, next_states, dones, gamma=0.99, lam=0.95):
 	values = agent.critic(states).detach().cpu().numpy().squeeze()
@@ -352,8 +386,8 @@ if __name__ == "__main__":
 	agent = PPOAgent(state_dim, action_dim)
 	best_path, final_path, rewards, steps = train_ppo(env, agent)
 	# Interactive menu for path animation
-	if final_path:
-		interactive_menu(final_path)
+	if best_path:
+		interactive_menu(best_path)
 
 
 

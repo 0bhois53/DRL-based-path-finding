@@ -94,7 +94,7 @@ class Environment(object):
 
     self.actionspace = {0:[v,0], 1:[0,v], 2: [-v,0], 3: [0,-v], 4: [-v,v], \
                       5:[-v,-v], 6:[v,v], 7: [v,-v]} #8 actions
-    # self.actionspace = {0:[v,0], 1:[0,v], 2: [-v,0], 3: [0,-v]} #action space, 4 actions
+    
     
   def reset(self): 
     self.agentState = np.copy(self.state0)

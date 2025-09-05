@@ -38,7 +38,6 @@ def shortcut_path(path):
     shortcut = [path[0]]
     for i in range(1, len(path)-1):
         prev, curr, nxt = path[i-1], path[i], path[i+1]
-        # If curr is in line with prev and nxt, skip curr
         if (nxt[0]-prev[0])*(curr[1]-prev[1]) == (curr[0]-prev[0])*(nxt[1]-prev[1]):
             continue
         shortcut.append(curr)
@@ -366,20 +365,3 @@ def animate_comparison(agent, env, starting_position, target_position,
         'randomized': {'animation': randomized_anim, 'result': randomized_result}
     }
 
-
-if __name__ == "__main__":
-    print("This is an animation module for Q-learning evaluation.")
-    print("Import this module and use the animation functions.")
-    print("\nAvailable functions:")
-    print("1. animate_evaluation() - Single episode animation")
-    print("2. animate_randomized_evaluations() - Multiple randomized environments")
-    print("3. animate_comparison() - Compare training vs randomized")
-    print("4. run_animated_evaluation() - Convenience function with speed options")
-    print("\nExample usage:")
-    print("  from q_learning_animation import animate_evaluation, animate_randomized_evaluations")
-    print("  # Single episode on training environment")
-    print("  anim, results = animate_evaluation(agent, env, start_pos, target_pos, use_randomized_env=False)")
-    print("  # Single episode on randomized environment") 
-    print("  anim, results = animate_evaluation(agent, env, start_pos, target_pos, use_randomized_env=True)")
-    print("  # Multiple randomized environments")
-    print("  anims, results = animate_randomized_evaluations(agent, env, start_pos, target_pos, num_episodes=3)")

@@ -171,21 +171,16 @@ def update():
         unew = np.linspace(0, 1, max(100, len(x)*3))
         out = splev(unew, tck)
         return out[0], out[1]
-
     # Smooth the final path
     x_smooth, y_smooth = smooth_path(x_final, y_final)
 
     plt.figure()
     plt.quiver(x_shortest[:-1], y_shortest[:-1], x_shortest[1:]-x_shortest[:-1], y_shortest[1:]-y_shortest[:-1], scale_units='xy', angles='xy', scale=1)
-
     # Plot smoothed path (B-spline)
     plt.plot(x_smooth, y_smooth, color='orange', linewidth=2, label='Smoothed Path (B-spline)')
-
-    
     for i in range(len(x_o)):
         rectangle = mpatches.Rectangle((10 * (x_o[i] - 0.5), 10 * (10 - y_o[i] - 0.5)), obstacle_width, obstacle_width, fc='blue', ec='blue')
         plt.gca().add_patch(rectangle)
-  
     plt.scatter(starting_position[0], starting_position[1], edgecolors='k', facecolors='red', s=100, label="Start")
     plt.scatter(target_position[0], target_position[1], edgecolors='k', facecolors='red', s=100, label="Target")
     plt.grid(linestyle=':')
@@ -198,16 +193,15 @@ def update():
     plt.gca().set_aspect('equal', adjustable='box')
     plt.savefig(r'T:\PPO\DRL-based-path-finding\Q_learning\Q_learning_visuals\Q_learning_Shortest_Path.png', format='png', dpi=300)
 
+
+
     plt.figure()
     plt.quiver(x_final[:-1], y_final[:-1], x_final[1:]-x_final[:-1], y_final[1:]-y_final[:-1], scale_units='xy', angles='xy', scale=1)
-
     # Plot smoothed path (B-spline)
     plt.plot(x_smooth, y_smooth, color='orange', linewidth=2, label='Smoothed Path (B-spline)')
-
     for i in range(len(x_o)):
         rectangle = mpatches.Rectangle((10 * (x_o[i] - 0.5), 10 * (10 - y_o[i] - 0.5)), obstacle_width, obstacle_width, fc='blue', ec='blue')
         plt.gca().add_patch(rectangle)
-
     plt.scatter(starting_position[0], starting_position[1], edgecolors='k', facecolors='red', s=100, label="Start")
     plt.scatter(target_position[0], target_position[1], edgecolors='k', facecolors='red', s=100, label="Target")
     plt.grid(linestyle=':')
@@ -220,7 +214,31 @@ def update():
     plt.gca().set_aspect('equal', adjustable='box')
     plt.savefig(r'T:\PPO\DRL-based-path-finding\Q_learning\Q_learning_visuals\Q_learning_Final_Path.png', format='png', dpi=300)
     plt.show()
-    # Plotting the results
+
+
+
+     # Plot the unsmoothed path taken by the agent
+    plt.figure()
+    plt.quiver(x_shortest[:-1], y_shortest[:-1], x_shortest[1:]-x_shortest[:-1], y_shortest[1:]-y_shortest[:-1], scale_units='xy', angles='xy', scale=1)
+    plt.plot(x_shortest, y_shortest, color='black', linewidth=2)
+    for i in range(len(env.Obstacle_x)):
+        rectangle = mpatches.Rectangle((10 * (env.Obstacle_x[i] - 0.5), 10 * (10 - env.Obstacle_y[i] - 0.5)), 
+                                obstacle_width, obstacle_width, fc='blue', ec="blue")
+        plt.gca().add_patch(rectangle)
+    plt.scatter(starting_position[0],starting_position[1], ec = 'k', c ='red', s=100, label ="Start")
+    plt.scatter(target_position[0],target_position[1], ec = 'k', c ='red', s =100,label="Target")
+    plt.grid(linestyle=':')
+    plt.xlim(0,100)
+    plt.ylim(0,100)
+    plt.xlabel('x (m)',size = '14')
+    plt.ylabel('y (m)',size = '14')
+    plt.xticks(size = '12')
+    plt.yticks(size = '12')
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.savefig('qlearning_Shortest_Path_unsmoothed.png', format='png', dpi=300)
+    plt.show()
+   
+   # Plotting the results
     # Return evaluation results for comparison
     return None, randomized_eval_results
 
